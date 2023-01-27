@@ -7,11 +7,14 @@ import { Container, ErrorMessage } from './App.styled';
 import fetchImages from '../../servises/images-api';
 
 
-class App extends Component {
+export default class App extends Component {
   state = {
     images: [],
     searchWord: "",
-    page: 1,
+    page: {
+      pageNumber: "",
+      pageTotal: "",
+    },
     status: "",
 }
 
@@ -21,18 +24,21 @@ componentDidUpdate(prevProps, prevState) {
 
   const prevWord = prevState.searchWord;
   const nextWord = searchWord;
-  const prevPage = prevState.page;
-  const nextPage = page;
+  const prevPage = prevState.page.pageNumber;
+  const nextPage = page.pageNumber;
 
   if (prevWord !== nextWord && !"") {
     this.setState({status: "LOADING"});
-    const newImage = fetchImages(nextWord, page);
+    const newImage = fetchImages(nextWord, page.pageNumber);
     newImage
       .then( data  => {
         if (data.total === 0) {
           this.setState({ status: "ERROR" })
         } else {
-          this.setState({ images: data.hits, status: "OK" });
+          // this.setState({ images: data.hits, status: "OK", page: {...prevState.page, pageNumber: 1, pageTotal: data.totalHits} });
+          this.setState(prevState => ({
+            images: data.hits, status: "OK", page: {...prevState.page, pageNumber: 1, pageTotal: data.totalHits}
+          }));
         }
       })
       .catch(() => { this.setState({status: "ERROR"}) }) 
@@ -40,7 +46,7 @@ componentDidUpdate(prevProps, prevState) {
 
   if (prevWord === nextWord && prevPage !== nextPage) {
     this.setState({status: "LOADING"});
-    const newImage = fetchImages(nextWord, page);
+    const newImage = fetchImages(nextWord, page.pageNumber);
     newImage
       .then( data  => {
         this.setState(prevState => ({
@@ -54,39 +60,57 @@ componentDidUpdate(prevProps, prevState) {
 formSubmitHandler = ({ keyWord }) => {
   this.setState(prevState => {
     if (prevState.searchWord !== keyWord) {
-      return { page: 1, searchWord: keyWord, images: [] }
+      const newPage = {...this.state.page}
+      newPage.pageNumber = 1
+      return { page: newPage, searchWord: keyWord, images: [] }
     } else { return { searchWord: keyWord } }
   });
 }
 
 handleIncrement = () => {
   this.setState(prevState => {
-  return { page: prevState.page + 1 };
+  return {
+    page: { ...prevState.page, pageNumber: prevState.page.pageNumber + 1 }
+  };
 });
 }
 
-render() {
-  const { status, searchWord, images } = this.state;
-      return (
-        <Container>
-          <Searchbar onSubmit={this.formSubmitHandler}
-          />
-          {status === "LOADING" && (
-            <Loader />
-          )}
-
-          {status === "ERROR" && (
-            <ErrorMessage>No images for keyword "{searchWord}"</ErrorMessage>
-          )}
-          
-          <ImageGallery data={images} onClose={this.toggleModal}/>
-
-          {images.length > 11 && (
-            <Button text={"Load more"} type="button" onClick={this.handleIncrement} />
-          )}
-        </Container>
-        )
+lastPageDef = () => {
+  const { page } = this.state;
+  let lastPage = Number(page.pageTotal % 12);
+  if (lastPage === 0) {
+      return lastPage = Number(page.pageTotal / 12);
+  } else {
+      return lastPage = Number.parseInt(page.pageTotal / 12) + 1;
   }
 }
 
-export default App;
+render() {
+  const { status, searchWord, images, page } = this.state;
+  const lastPage = this.lastPageDef();
+
+return (
+  <Container>
+    <Searchbar onSubmit={this.formSubmitHandler}
+    />
+    {status === "LOADING" && (
+      <Loader />
+    )}
+
+    {status === "ERROR" && (
+      <ErrorMessage>No images for keyword "{searchWord}"</ErrorMessage>
+    )}
+    
+    <ImageGallery data={images} onClose={this.toggleModal}/>
+
+    {(images.length > 11 && page.pageNumber !== lastPage) && (
+      <Button text={"Load more"} type="button" onClick={this.handleIncrement} />
+    )}
+    {(page.pageNumber === lastPage) && (
+      <ErrorMessage>You've reached the end of search results.</ErrorMessage>
+    )}
+  </Container>
+  )
+  }
+}
+
