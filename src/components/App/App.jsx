@@ -11,46 +11,51 @@ export default class App extends Component {
   state = {
     images: [],
     searchWord: "",
-    page: {
-      pageNumber: "",
-      pageTotal: "",
-    },
+    // page: {
+    //   pageNumber: "",
+    //   pageTotal: "",
+    // },
+    pageNumber: 1,
+    pageTotal: "",
     status: "",
 }
 
 componentDidUpdate(prevProps, prevState) {
 
-  const { page, searchWord } = this.state;
+  const { pageNumber, searchWord } = this.state;
 
   const prevWord = prevState.searchWord;
   const nextWord = searchWord;
-  const prevPage = prevState.page.pageNumber;
-  const nextPage = page.pageNumber;
-
-  if (prevWord !== nextWord && !"") {
+  // const prevPage = prevState.page.pageNumber;
+  // const nextPage = page.pageNumber;
+  const prevPage = prevState.pageNumber;
+  const nextPage = pageNumber;
+  
+  if (prevWord !== nextWord) {
     this.setState({status: "LOADING"});
-    const newImage = fetchImages(nextWord, page.pageNumber);
+    const newImage = fetchImages(nextWord, pageNumber);
     newImage
       .then( data  => {
         if (data.total === 0) {
           this.setState({ status: "ERROR" })
         } else {
-          // this.setState({ images: data.hits, status: "OK", page: {...prevState.page, pageNumber: 1, pageTotal: data.totalHits} });
-          this.setState(prevState => ({
-            images: data.hits, status: "OK", page: {...prevState.page, pageNumber: 1, pageTotal: data.totalHits}
-          }));
+          const newData = data.hits.map(({ id, webformatURL, largeImageURL }) => ({ id, webformatURL, largeImageURL }));
+          this.setState({
+            images: newData, status: "OK", pageTotal: data.totalHits,
+          });
         }
       })
       .catch(() => { this.setState({status: "ERROR"}) }) 
   }
 
-  if (prevWord === nextWord && prevPage !== nextPage) {
+  if (prevPage !== nextPage && prevWord === nextWord) {
     this.setState({status: "LOADING"});
-    const newImage = fetchImages(nextWord, page.pageNumber);
+    const newImage = fetchImages(nextWord, pageNumber);
     newImage
       .then( data  => {
+        const newData = data.hits.map(({ id, webformatURL, largeImageURL }) => ({ id, webformatURL, largeImageURL }));
         this.setState(prevState => ({
-          images: [...prevState.images, ...data.hits], status: "OK",
+          images: [...prevState.images, ...newData], status: "OK",
         }));
       })
       .catch(() => { this.setState({status: "ERROR"}) })
@@ -58,41 +63,43 @@ componentDidUpdate(prevProps, prevState) {
 }
 
 formSubmitHandler = ({ keyWord }) => {
-  this.setState(prevState => {
-    if (prevState.searchWord !== keyWord) {
-      const newPage = {...this.state.page}
-      newPage.pageNumber = 1
-      return { page: newPage, searchWord: keyWord, images: [] }
-    } else { return { searchWord: keyWord } }
-  });
+  const {searchWord} = this.state;
+  if (searchWord !== keyWord) {
+    this.setState({ searchWord: keyWord, pageNumber: 1, images: [] })
+    } else {
+        this.setState({ searchWord: keyWord })
+    } 
 }
 
 handleIncrement = () => {
-  this.setState(prevState => {
-  return {
-    page: { ...prevState.page, pageNumber: prevState.page.pageNumber + 1 }
-  };
-});
+  this.setState(prevState => (
+    { pageNumber: prevState.pageNumber + 1 }
+  ));
 }
 
 lastPageDef = () => {
-  const { page } = this.state;
-  let lastPage = Number(page.pageTotal % 12);
+  const { pageTotal } = this.state;
+  let lastPage = Number(pageTotal % 12);
   if (lastPage === 0) {
-      return lastPage = Number(page.pageTotal / 12);
+      return lastPage = Number(pageTotal / 12);
   } else {
-      return lastPage = Number.parseInt(page.pageTotal / 12) + 1;
+      return lastPage = Number.parseInt(pageTotal / 12) + 1;
   }
 }
 
 render() {
-  const { status, searchWord, images, page } = this.state;
+  const { status, searchWord, images, pageNumber } = this.state;
   const lastPage = this.lastPageDef();
 
 return (
   <Container>
     <Searchbar onSubmit={this.formSubmitHandler}
     />
+    
+    {status === "OK" && (
+    <ImageGallery data={images} onClose={this.toggleModal}/>
+    )}
+
     {status === "LOADING" && (
       <Loader />
     )}
@@ -100,13 +107,11 @@ return (
     {status === "ERROR" && (
       <ErrorMessage>No images for keyword "{searchWord}"</ErrorMessage>
     )}
-    
-    <ImageGallery data={images} onClose={this.toggleModal}/>
 
-    {(images.length > 11 && page.pageNumber !== lastPage) && (
+    {(status === "OK" && images.length > 11 && pageNumber !== lastPage) && (
       <Button text={"Load more"} type="button" onClick={this.handleIncrement} />
     )}
-    {(page.pageNumber === lastPage) && (
+    {(pageNumber === lastPage) && (
       <ErrorMessage>You've reached the end of search results.</ErrorMessage>
     )}
   </Container>
