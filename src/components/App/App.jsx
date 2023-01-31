@@ -11,10 +11,6 @@ export default class App extends Component {
   state = {
     images: [],
     searchWord: "",
-    // page: {
-    //   pageNumber: "",
-    //   pageTotal: "",
-    // },
     pageNumber: 1,
     pageTotal: "",
     status: "",
@@ -23,11 +19,8 @@ export default class App extends Component {
 componentDidUpdate(prevProps, prevState) {
 
   const { pageNumber, searchWord } = this.state;
-
   const prevWord = prevState.searchWord;
   const nextWord = searchWord;
-  // const prevPage = prevState.page.pageNumber;
-  // const nextPage = page.pageNumber;
   const prevPage = prevState.pageNumber;
   const nextPage = pageNumber;
   
@@ -60,6 +53,12 @@ componentDidUpdate(prevProps, prevState) {
       })
       .catch(() => { this.setState({status: "ERROR"}) })
     }
+}
+
+shouldComponentUpdate(nextProps, nextState) {
+  return nextState.searchWord !== this.state.searchWord ||
+        nextState.pageNumber !== this.state.pageNumber ||
+        nextState.images !== this.state.images;
 }
 
 formSubmitHandler = ({ keyWord }) => {

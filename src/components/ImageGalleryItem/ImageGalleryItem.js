@@ -16,13 +16,14 @@ state = {
     showModal: false,
 };
 
+
 toggleModal = () => {
     this.setState(({ showModal }) => ({
     showModal: !showModal,
 }));
 };
 
-render() {
+render() { 
     const { id, src, largeSrc } = this.props;
     return (
         <>
