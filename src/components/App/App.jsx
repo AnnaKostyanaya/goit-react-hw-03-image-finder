@@ -55,12 +55,6 @@ componentDidUpdate(prevProps, prevState) {
     }
 }
 
-shouldComponentUpdate(nextProps, nextState) {
-  return nextState.searchWord !== this.state.searchWord ||
-        nextState.pageNumber !== this.state.pageNumber ||
-        nextState.images !== this.state.images;
-}
-
 formSubmitHandler = ({ keyWord }) => {
   const {searchWord} = this.state;
   if (searchWord !== keyWord) {
@@ -87,32 +81,21 @@ lastPageDef = () => {
 }
 
 render() {
-  const { status, searchWord, images, pageNumber } = this.state;
+  const { status, searchWord, images, pageNumber, pageTotal } = this.state;
   const lastPage = this.lastPageDef();
 
 return (
+
   <Container>
-    <Searchbar onSubmit={this.formSubmitHandler}
-    />
-    
-    {status === "OK" && (
-    <ImageGallery data={images} onClose={this.toggleModal}/>
-    )}
-
-    {status === "LOADING" && (
-      <Loader />
-    )}
-
-    {status === "ERROR" && (
-      <ErrorMessage>No images for keyword "{searchWord}"</ErrorMessage>
-    )}
-
-    {(status === "OK" && images.length > 11 && pageNumber !== lastPage) && (
-      <Button text={"Load more"} type="button" onClick={this.handleIncrement} />
-    )}
-    {(pageNumber === lastPage) && (
+    <Searchbar onSubmit={this.formSubmitHandler} />
+    <ImageGallery data={images} onClose={this.toggleModal} />
+    {status === "ERROR" && <ErrorMessage>No images for keyword "{searchWord}"</ErrorMessage>}
+    {status === "LOADING" &&  <Loader />}
+    {(status === "OK" && images.length > 11 && pageNumber !== lastPage) &&
+      <Button text={"Load more"} type="button" onClick={this.handleIncrement} />}
+    {(pageNumber === lastPage && pageTotal > 0) && 
       <ErrorMessage>You've reached the end of search results.</ErrorMessage>
-    )}
+    }
   </Container>
   )
   }
